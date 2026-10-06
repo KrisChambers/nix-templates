@@ -1,21 +1,36 @@
 {
-  description = "Basic rust project setup";
+  description = "Basic Rust environment";
 
   inputs = {
-    nixpkgs.url = "https://channels.nixos.org/nixpkgs-unstable/nixexprs.tar.zst";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {self, nixpkgs}:
-    let pkgs = nixpkgs.legacyPackages.x86_64-linux;
-    in {
-        devShells.x86_64-linux.default = pkgs.mkShell {
-            packages = [
-                pkgs.cargo
-                pkgs.rustc
-                pkgs.clippy
-                pkgs.rustfmt
-                pkgs.rust-analyzer
-            ];
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      rust-overlay,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ rust-overlay.overlays.default ];
         };
-    };
+
+        toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          packages = [ toolchain ];
+        };
+      }
+    );
 }
